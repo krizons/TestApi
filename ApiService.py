@@ -1,12 +1,10 @@
 from fastapi import FastAPI
 import time
-import pika
 import json
+from aio_pika import connect, Message
 import aioredis
-credentials = pika.PlainCredentials('test', 'test')
-connection = pika.BlockingConnection(pika.ConnectionParameters('localhost',credentials=credentials))
-channel = connection.channel() 
-channel.queue_declare(queue='calculate') 
+from model import Calc
+
 redis = aioredis.from_url("redis://localhost")
 app = FastAPI()
 
@@ -21,9 +19,18 @@ async def get_result(token:int):
     
 
 @app.post("/calculate")
-def calculate(A:int,B:int):
+async def calculate(A:int,B:int):
     token_task=int(time.time())
-    json_send={"A":A,"B":B,"token":token_task}
-    channel.basic_publish(exchange = "", routing_key = "calculate", body =json.dumps(json_send) )
+    json_send={"A":A,"B":A,"token":token_task}
+    connection = await connect("amqp://test:test@localhost/")
+
+    channel = await connection.channel()
+
+    await channel.default_exchange.publish(
+        Message(json.dumps(json_send).encode("utf-8")),
+        routing_key = "calculate"
+    )
+
+    await connection.close()
     return {"token": token_task}
 #uvicorn ApiService:app --reload
