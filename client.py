@@ -10,6 +10,7 @@ async def on_message(message: IncomingMessage):
     if("A" in json_data and "B" in json_data and "token" in json_data):
           await  redis.set(json_data["token"],json.dumps({"summ":json_data["A"]+json_data["B"]}))
 async def main(loop):
+
     connection = await connect(
         "amqp://test:test@localhost/", loop=loop
     )
